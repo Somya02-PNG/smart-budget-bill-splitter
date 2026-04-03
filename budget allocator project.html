@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Budget & Bill Splitter</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f9fc;
+    }
+    header {
+      background: #2c3e50;
+      padding: 20px;
+      color: white;
+      text-align: center;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      background: #34495e;
+    }
+    nav button {
+      border: none;
+      padding: 15px 25px;
+      font-size: 16px;
+      background: transparent;
+      color: white;
+      cursor: pointer;
+    }
+    nav button.active {
+      background: #1abc9c;
+      font-weight: bold;
+    }
+
+    section {
+      display: none;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+    section.active {
+      display: block;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin: 8px 0;
+    }
+
+    button {
+      background: #1abc9c;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover {
+      background: #16a085;
+    }
+
+    canvas {
+      margin-top: 20px;
+      width: 100% !important;
+      height: 350px !important;
+    }
+
+    .history-item {
+      background: #ecf0f1;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 8px;
+    }
+
+    #history {
+      max-height: 250px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Smart Budget Allocator & Bill Splitter</h1>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav>
+    <button class="tab active" data-target="budget">💰 Budget Allocator</button>
+    <button class="tab" data-target="splitter">🤝 Bill Splitter</button>
+  </nav>
+
+  <!-- Budget Allocator Section -->
+  <section id="budget" class="active">
+    <div class="card">
+      <h2>Smart Budget Allocator</h2>
+
+      <label>Total Monthly Income:</label>
+      <input type="number" id="income" placeholder="Enter your monthly income">
+
+      <label>Savings (%):</label>
+      <input type="number" id="savings" value="20">
+
+      <button onclick="calculateBudget()">Calculate</button>
+
+      <div id="budget-output"></div>
+      <canvas id="budgetChart"></canvas>
+    </div>
+  </section>
+
+  <!-- Bill Splitter Section -->
+  <section id="splitter">
+    <div class="card">
+      <h2>Bill Splitter</h2>
+
+      <input type="text" id="eventName" placeholder="Event Name (e.g. Goa Trip)">
+      <input type="number" id="totalExpense" placeholder="Total Amount">
+      <input type="number" id="numPeople" placeholder="Number of People">
+
+      <button onclick="splitBill()">Split Bill</button>
+
+      <div id="split-output"></div>
+    </div>
+
+    <div class="card">
+      <h3>Past Events</h3>
+      <div id="history"></div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // TAB SWITCHING
+    const tabs = document.querySelectorAll(".tab");
+    const sections = document.querySelectorAll("section");
+
+    tabs.forEach(btn => {
+      btn.onclick = () => {
+        tabs.forEach(b => b.classList.remove("active"));
+        sections.forEach(s => s.classList.remove("active"));
+
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.target).classList.add("active");
+      };
+    });
+
+    // BUDGET CALCULATOR
+    let chart;
+
+    function calculateBudget() {
+      const income = Number(document.getElementById("income").value);
+      const savingPercent = Number(document.getElementById("savings").value);
+
+      if (income <= 0) {
+        alert("Please enter a valid income!");
+        return;
+      }
+
+      const savings = income * (savingPercent / 100);
+      const essentials = income * 0.5;
+      const lifestyle = income * 0.3;
+      const remaining = income - (essentials + lifestyle + savings);
+
+      document.getElementById("budget-output").innerHTML = `
+        <p><strong>Essentials (50%):</strong> ₹${essentials.toFixed(2)}</p>
+        <p><strong>Lifestyle (30%):</strong> ₹${lifestyle.toFixed(2)}</p>
+        <p><strong>Savings (${savingPercent}%):</strong> ₹${savings.toFixed(2)}</p>
+        <p><strong>Remaining:</strong> ₹${remaining.toFixed(2)}</p>
+      `;
+
+      const ctx = document.getElementById("budgetChart");
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: ["Essentials", "Lifestyle", "Savings", "Remaining"],
+          datasets: [{
+            data: [essentials, lifestyle, savings, remaining]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    // BILL SPLITTER
+    function splitBill() {
+      const name = document.getElementById("eventName").value;
+      const total = Number(document.getElementById("totalExpense").value);
+      const people = Number(document.getElementById("numPeople").value);
+
+      if (!name || total <= 0 || people <= 0) {
+        alert("Please enter valid inputs");
+        return;
+      }
+
+      const perPerson = (total / people).toFixed(2);
+
+      document.getElementById("split-output").innerHTML = `
+        <p><strong>${name}</strong>: Each person pays ₹${perPerson}</p>
+      `;
+
+      let history = JSON.parse(localStorage.getItem("history")) || [];
+      history.unshift({ name, total, people, perPerson });
+      localStorage.setItem("history", JSON.stringify(history));
+
+      loadHistory();
+    }
+
+    function loadHistory() {
+      const history = JSON.parse(localStorage.getItem("history")) || [];
+      const hDiv = document.getElementById("history");
+
+      hDiv.innerHTML = "";
+
+      history.forEach(item => {
+        hDiv.innerHTML += `
+          <div class="history-item">
+            <strong>${item.name}</strong> → Total: ₹${item.total},  
+            People: ${item.people},  
+            Per Person: ₹${item.perPerson}
+          </div>
+        `;
+      });
+    }
+
+    loadHistory();
+  </script>
+
+</body>
+</html>
